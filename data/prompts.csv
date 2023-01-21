@@ -1,0 +1,3 @@
+tag,file_path
+male,prompts/sd-male-prompts.json
+female,prompts/sd-female-prompts.json
