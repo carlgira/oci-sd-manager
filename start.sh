@@ -122,6 +122,7 @@ fi
 
 # locate the bin folder of the venv
 export venv_bin_dir=$(dirname "$(command -v python)")
+export OIC_URL='https://wedooic-wedoinfra.integration.ocp.oraclecloud.com'
 
 printf "\n%s\n" "${delimiter}"
 printf "Launching app.py..."
