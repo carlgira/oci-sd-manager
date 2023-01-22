@@ -24,7 +24,7 @@ prompts = pd.read_csv(PROMPTS_FILE)
 flask = Flask(__name__)
 cors = CORS(flask)
 OIC_URL = os.environ['OIC_URL']
-cors_origins = [OIC_URL]
+cors_origins = [OIC_URL, 'http://localhost']
 
 object_storage_client = ObjectStorageClient(config=oci.config.from_file('~/.oci/config'))
 
