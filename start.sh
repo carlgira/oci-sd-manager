@@ -7,7 +7,6 @@ then
     export install_dir="$(eval echo ~$USER)"
 fi
 
-WORK_DIR=$install_dir/dreambooth
 
 if [[ -z "${LAUNCH_SCRIPT}" ]]
 then
