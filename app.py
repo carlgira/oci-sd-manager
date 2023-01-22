@@ -24,7 +24,7 @@ prompts = pd.read_csv(PROMPTS_FILE)
 flask = Flask(__name__)
 cors = CORS(flask)
 OIC_URL = os.environ['OIC_URL']
-cors_origins = [OIC_URL, 'http://localhost']
+cors_origins = ['*']
 
 object_storage_client = ObjectStorageClient(config=oci.config.from_file('~/.oci/config'))
 
@@ -43,7 +43,7 @@ def work_requests_api():
 
     if request.method == 'GET':
         mail = request.args.get('mail')
-        if mail is None:
+        if mail is None or len(mail) == 0:
             return jsonify(work_requests.to_dict(orient='records'))
         
         return jsonify(work_requests.loc[work_requests['mail'] == mail].to_dict(orient='records'))
