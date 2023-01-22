@@ -29,7 +29,8 @@ cors_origins = [OIC_URL]
 object_storage_client = ObjectStorageClient(config=oci.config.from_file('~/.oci/config'))
 
 @flask.route('/work_requests', methods=['PUT', 'GET', 'POST'])
-def work_requests():
+def work_requests_api():
+    global work_requests
     
     if request.method == 'PUT':
         content = request.get_json()
@@ -60,7 +61,8 @@ def work_requests():
 
 
 @flask.route('/servers', methods=['GET'])
-def servers():
+def servers_api():
+    global servers
     if request.method == 'GET':
         return jsonify(servers.to_dict(orient='records'))
     return jsonify({'status': 'error', 'message': 'Invalid request'})
@@ -68,6 +70,7 @@ def servers():
 
 @flask.route('/submit', methods=['POST'])
 def submit():
+    global work_requests
     if request.method == 'POST':
         
         content = request.get_json()
@@ -148,6 +151,7 @@ def smart_crop_request(mail, server, session, file, fileobj):
 
 @flask.route('/train', methods=['POST'])
 def train():
+    global work_requests
     if request.method == 'POST':
         content = request.get_json()
         mail = content['mail']
@@ -187,6 +191,7 @@ def start_training(mail, zip_file, server ,session):
 
 
 def check_if_training(runnable_task, mail):
+    global work_requests
     server = work_requests.loc[work_requests['mail'] == mail, 'server'].values[0]
     if is_dreambooth_running(server):
         runnable_task.enter(300, 1, check_if_training, (runnable_task, mail))
@@ -195,6 +200,7 @@ def check_if_training(runnable_task, mail):
 
 
 def sd_ready(runnable_task, mail):
+    global work_requests
     tag = work_requests.loc[work_requests['mail'] == mail, 'tag'].values[0]
     session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
     SESSION_DIR = 'sessions/' + session
