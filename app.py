@@ -26,10 +26,7 @@ cors = CORS(flask)
 OIC_URL = os.environ['OIC_URL']
 cors_origins = [OIC_URL]
 
-
-
-signer = oci.auth.signers.get_resource_principals_signer()
-object_storage_client = ObjectStorageClient(config={}, signer=signer)
+object_storage_client = ObjectStorageClient(config=oci.config.from_file('~/.oci/config'))
 
 @flask.route('/work_requests', methods=['PUT', 'GET', 'POST'])
 def work_requests():
@@ -127,7 +124,6 @@ def submit():
 
 def is_training_running(mail):
     return len(work_requests.loc[(work_requests['mail'] == mail) & (work_requests['status'] != 'completed')]) > 0
-
 
 def extract_fields_from_url(url):
     match = re.search(r'\/n\/(?P<namespace>\w+)\/b\/(?P<bucket>\w+)\/o\/(?P<mail>\w+@[\w.]+)\/(?P<filename>[\w.]+)', url)
