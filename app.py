@@ -230,7 +230,7 @@ def is_dreambooth_running(server):
 
 # run the flask app
 if __name__ == '__main__':
-    flask.run(debug=True, port=3000)
+    flask.run(debug=True, port=7000)
     
 
 
