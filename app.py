@@ -44,9 +44,11 @@ def work_requests_api():
     if request.method == 'GET':
         mail = request.args.get('mail')
         if mail is None or len(mail) == 0:
+            
             return jsonify(work_requests.to_dict(orient='records'))
         
-        return jsonify(work_requests.loc[work_requests['mail'] == mail].to_dict(orient='records'))
+        decoded_mail = mail.replace('%40', '@')
+        return jsonify(work_requests.loc[work_requests['mail'] == decoded_mail].to_dict(orient='records'))
         
     if request.method == 'POST':
         content = request.get_json()
