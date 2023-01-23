@@ -185,7 +185,7 @@ def start_training(mail, zip_file, server ,session):
     
     if r.status_code == 200:
         task_training = sched.scheduler(time.time, time.sleep)
-        task_training.enter(300, 1, check_if_training, (task_training,))
+        task_training.enter(300, 1, check_if_training, (task_training, mail,))
         task_training.run()
     else:
         update_status_work_request(mail, 'train_failed')
