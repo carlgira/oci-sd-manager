@@ -53,7 +53,7 @@ def work_requests_api():
         content = request.get_json()
         mail = content['mail']
         server = content['server']
-        work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': '', 'session' : '', 'status': 'created'}, ignore_index=True)
+        work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': 'None', 'session' : 'None', 'status': 'created'}, ignore_index=True)
         work_requests.to_csv(WORK_REQUEST_FILE, index=False)
         
         return jsonify({'status': 'success', 'message': 'Work request created'})
