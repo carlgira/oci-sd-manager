@@ -58,8 +58,8 @@ def servers_api():
     return jsonify({'status': 'error', 'message': 'Invalid request'})
 
 
-@flask.route('/submit', methods=['POST'])
-def submit():
+@flask.route('/submit_images', methods=['POST'])
+def submit_images():
     global work_requests
     if request.method == 'POST':
         
