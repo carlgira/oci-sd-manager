@@ -182,6 +182,7 @@ def start_training(mail, zip_file, server ,session):
     update_status_work_request(mail, 'training_started')
     
     r = requests.post('http://' + server + ':3000/', data=payload, files={"images": (zip_file, fileobj)})
+    logging.info('Training started ')
     
     if r.status_code == 200:
         task_training = sched.scheduler(time.time, time.sleep)
@@ -195,8 +196,10 @@ def check_if_training(runnable_task, mail):
     global work_requests
     server = work_requests.loc[work_requests['mail'] == mail, 'server'].values[0]
     if is_dreambooth_running(server):
+        logging.info('Still training')
         runnable_task.enter(60, 1, check_if_training, (runnable_task, mail))
     else:
+        logging.info('SD ready')
         runnable_task.enter(300, 1, sd_ready, (runnable_task, mail))
 
 
