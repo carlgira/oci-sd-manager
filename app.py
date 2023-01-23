@@ -49,17 +49,6 @@ def work_requests_api():
         decoded_mail = mail.replace('%40', '@')
         return jsonify(work_requests.loc[work_requests['mail'] == decoded_mail].to_dict(orient='records'))
         
-    if request.method == 'POST':
-        content = request.get_json()
-        mail = content['mail']
-        server = content['server']
-        work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': 'None', 'session' : 'None', 'status': 'created'}, ignore_index=True)
-        work_requests.to_csv(WORK_REQUEST_FILE, index=False)
-        
-        return jsonify({'status': 'success', 'message': 'Work request created'})
-    
-    return jsonify({'status': 'error', 'message': 'Invalid request'})
-
 
 @flask.route('/servers', methods=['GET'])
 def servers_api():
@@ -82,8 +71,7 @@ def submit():
         images = content['images']
         session = ''.join(random.choice('abcdefghijklmnopqrtsvwyz') for i in range(10))
         
-        work_requests.loc[work_requests['mail'] == mail, 'session'] = session
-        work_requests.loc[work_requests['mail'] == mail, 'tag'] = tag
+        work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': tag, 'session' : session, 'status': 'created'}, ignore_index=True)
         work_requests.to_csv(WORK_REQUEST_FILE, index=False)
         
         SESSION_DIR = 'sessions/' + session
@@ -132,6 +120,14 @@ def is_training_running(mail):
 def extract_fields_from_url(url):
     match = re.search(r'\/n\/(?P<namespace>\w+)\/b\/(?P<bucket>\w+)\/o\/(?P<mail>\w+@[\w.]+)\/(?P<filename>[\w.]+)', url)
     return match.groupdict()
+
+def extract_fields_from_url(url):
+    url = url.split('/')
+    namespace = url[-6]
+    bucket = url[-4]
+    folder = url[-2]
+    filename = url[-1]
+    return {"namespace": namespace, "bucket": bucket, "mail": folder, "filename": filename}
 
 def update_status_work_request(mail, status):
     work_requests.loc[work_requests['mail'] == mail, 'status'] = status
