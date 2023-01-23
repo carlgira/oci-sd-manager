@@ -11,6 +11,8 @@ import re
 import time
 from oci.object_storage import ObjectStorageClient
 import sched
+import logging
+logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.DEBUG)
 
 WORK_DIR = os.environ['install_dir']
 SEVERS_FILE= 'data/servers.csv'
@@ -140,8 +142,10 @@ def smart_crop_request(mail, server, session, file, fileobj):
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
         with open(zip_ready_file, 'wb') as f:
             f.write(r.content)
+        logging.info('Smart crop completed ' + r.text)
         update_status_work_request(mail, 'smart_crop_completed')
     else:
+        logging.info('Smart crop failed ' + r.text)
         update_status_work_request(mail, 'smart_crop_failed')
         
 
