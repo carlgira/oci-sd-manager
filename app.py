@@ -134,7 +134,7 @@ def update_status_work_request(mail, status):
 
 def smart_crop_request(mail, server, session, file, fileobj):
     time.sleep(10) # Wait to process gets to wait activity
-    r = requests.post('http://' + server +':6000/', data={'session': session}, files={"images": (file, fileobj)})
+    r = requests.post('http://' + server +':4000/', data={'session': session}, files={"images": (file, fileobj)})
             
     if r.status_code == 200:
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
