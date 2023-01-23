@@ -71,16 +71,15 @@ def submit_images():
         images = content['images']
         session = ''.join(random.choice('abcdefghijklmnopqrtsvwyz') for i in range(10))
         
-        work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': tag, 'session' : session, 'status': 'created'}, ignore_index=True)
-        work_requests.to_csv(WORK_REQUEST_FILE, index=False)
-        
         SESSION_DIR = 'sessions/' + session
         os.mkdir(SESSION_DIR)
         
         if not is_training_running(mail):
-            
             if images is None or len(images) == 0:
                 return jsonify(message='No file uploaded', category="error", status=500)
+            
+            work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': tag, 'session' : session, 'status': 'created'}, ignore_index=True)
+            work_requests.to_csv(WORK_REQUEST_FILE, index=False)
             
             for i, img_url in enumerate(images):
                 url_parts = extract_fields_from_url(img_url)
