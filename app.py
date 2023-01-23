@@ -156,11 +156,12 @@ def train():
         content = request.get_json()
         mail = content['mail']
         session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
+        server = work_requests.loc[work_requests['mail'] == mail, 'server'].values[0]
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
         
         update_status_work_request(mail, 'training_started')
         
-        tr = threading.Thread(target=start_training, args=(mail, zip_ready_file, session))
+        tr = threading.Thread(target=start_training, args=(mail, zip_ready_file, server , session))
         tr.start()
         
         return jsonify({'status': 'success', 'message': 'Training started'})
