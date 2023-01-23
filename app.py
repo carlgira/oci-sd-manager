@@ -202,6 +202,11 @@ def check_if_training(runnable_task, mail):
         logging.info('SD ready')
         runnable_task.enter(300, 1, sd_ready, (runnable_task, mail))
 
+@flask.route('/sd_ready', methods=['POST'])
+def sd_ready_api():
+    content = request.get_json()
+    mail = content['mail']
+    sd_ready(None, mail)
 
 def sd_ready(runnable_task, mail):
     global work_requests
@@ -211,7 +216,7 @@ def sd_ready(runnable_task, mail):
     
     server = work_requests.loc[work_requests['mail'] == mail, 'server'].values[0]
     
-    file_prompt = prompts.loc[prompts['tag'] == tag, 'file'].values[0]
+    file_prompt = prompts.loc[prompts['tag'] == tag, 'file_path'].values[0]
     
     new_file_prompt = SESSION_DIR + '/' + '/prompts.json'
     subprocess.getoutput("cp " + file_prompt + " " + new_file_prompt)
