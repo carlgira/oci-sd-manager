@@ -141,10 +141,10 @@ def smart_crop_request(mail, server, session, file, fileobj):
     r = requests.post('http://' + server +':4000/submit', data={'session': session}, files={"images": (file, fileobj)})
             
     if r.status_code == 200:
+        zip_ready_file = 'sessions/' + session + '/images_ready.zip'
         with open(zip_ready_file, 'wb') as f:
             f.write(r.content)
             
-        zip_ready_file = 'sessions/' + session + '/images_ready.zip'
         crop_images_dir = 'sessions/' + session + '/' + mail + '_crop_images'
         
         if not os.path.exists(crop_images_dir):
