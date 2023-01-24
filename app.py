@@ -105,7 +105,7 @@ def submit_images():
             
             fileobj = open(zip_file, 'rb')
             
-            update_status_work_request(mail, 'smart_crop')
+            update_status_work_request(mail, 'smart_crop_started')
             
             tr = threading.Thread(target=smart_crop_request, args=(mail, server, session, file, fileobj))
             tr.start()
@@ -141,6 +141,9 @@ def smart_crop_request(mail, server, session, file, fileobj):
     r = requests.post('http://' + server +':4000/submit', data={'session': session}, files={"images": (file, fileobj)})
             
     if r.status_code == 200:
+        with open(zip_ready_file, 'wb') as f:
+            f.write(r.content)
+            
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
         crop_images_dir = 'sessions/' + session + '/' + mail + '_crop_images'
         
@@ -157,8 +160,6 @@ def smart_crop_request(mail, server, session, file, fileobj):
                 put_object_body=open(crop_images_dir + '/' + file, 'rb')
             )
         
-        with open(zip_ready_file, 'wb') as f:
-            f.write(r.content)
         logging.info('Smart crop completed ' + r.text)
         update_status_work_request(mail, 'smart_crop_completed')
     else:
