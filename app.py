@@ -147,7 +147,7 @@ def smart_crop_request(mail, server, session, file, fileobj):
         if not os.path.exists(crop_images_dir):
             os.mkdir(crop_images_dir)
             
-        subprocess.run(["unzip", zip_ready_file, '-d' , crop_images_dir], check=True)
+        subprocess.run(["unzip", "-o" , zip_ready_file, '-d' , crop_images_dir], check=True)
         
         for file in os.listdir(crop_images_dir):
             object_storage_client.put_object(
@@ -253,7 +253,7 @@ def sd_ready(runnable_task, mail):
         if not os.path.exists(generated_images_dir):
             os.mkdir(generated_images_dir)
         
-        subprocess.run(["unzip", zip_ready_generated, '-d' , generated_images_dir], check=True)
+        subprocess.run(["unzip", '-o', zip_ready_generated, '-d' , generated_images_dir], check=True)
         
         for file in os.listdir(generated_images_dir):
             object_storage_client.put_object(
