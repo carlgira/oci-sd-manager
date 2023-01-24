@@ -106,6 +106,7 @@ def submit_images():
             fileobj = open(zip_file, 'rb')
             
             update_status_work_request(mail, 'smart_crop_started')
+            update_status_server(server, 'busy')
             
             tr = threading.Thread(target=smart_crop_request, args=(mail, server, session, file, fileobj))
             tr.start()
@@ -136,10 +137,14 @@ def update_status_work_request(mail, status):
     work_requests.loc[work_requests['mail'] == mail, 'status'] = status
     work_requests.to_csv(WORK_REQUEST_FILE, index=False)
 
+def update_status_server(server, status):
+    servers.loc[servers['server'] == server, 'status'] = status
+    servers.to_csv(SEVERS_FILE, index=False)
+
 def smart_crop_request(mail, server, session, file, fileobj):
     time.sleep(10) # Wait to process gets to wait activity
     r = requests.post('http://' + server +':4000/submit', data={'session': session}, files={"images": (file, fileobj)})
-            
+    
     if r.status_code == 200:
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
         with open(zip_ready_file, 'wb') as f:
@@ -165,6 +170,8 @@ def smart_crop_request(mail, server, session, file, fileobj):
     else:
         logging.info('Smart crop failed ' + r.text)
         update_status_work_request(mail, 'smart_crop_failed')
+    
+    update_status_server(server, 'free')
         
 
 @flask.route('/train', methods=['POST'])
@@ -178,6 +185,7 @@ def train():
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
         
         update_status_work_request(mail, 'training_started')
+        update_status_server(server, 'busy')
         
         tr = threading.Thread(target=start_training, args=(mail, zip_ready_file, server , session))
         tr.start()
@@ -208,6 +216,7 @@ def start_training(mail, zip_file, server ,session):
         task_training.run()
     else:
         update_status_work_request(mail, 'train_failed')
+        update_status_server(server, 'free')
 
 
 def check_if_training(runnable_task, mail):
@@ -270,6 +279,8 @@ def sd_ready(runnable_task, mail):
         update_status_work_request(mail, 'image_generation_completed')
     else:
         update_status_work_request(mail, 'image_generation_failed')
+    
+    update_status_server(server, 'free')
 
 def is_dreambooth_running(server):
     r = requests.get('http://' + server + ':3000/status')
