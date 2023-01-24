@@ -101,7 +101,7 @@ def submit_images():
             
             file = 'images.zip'    
             zip_file = SESSION_DIR + '/' + file
-            subprocess.getoutput("zip -j {ZIP_FILE} {ZIP_FILES}".format(ZIP_FILE=zip_file, ZIP_FILES=SESSION_DIR + '/*'))
+            subprocess.getoutput("zip -j {ZIP_FILE} {ZIP_FILES}".format(ZIP_FILE=zip_file, ZIP_FILES=original_images + '/*'))
             
             fileobj = open(zip_file, 'rb')
             
