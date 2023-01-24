@@ -251,6 +251,9 @@ def sd_ready(runnable_task, mail):
         zip_ready_generated = 'sessions/' + session + '/images_generated.zip'
         generated_images_dir = 'sessions/' + session + '/' + mail + '_generated_images'
         
+        with open(zip_ready_generated, 'wb') as f:
+            f.write(r.content)
+        
         if not os.path.exists(generated_images_dir):
             os.mkdir(generated_images_dir)
         
@@ -264,8 +267,6 @@ def sd_ready(runnable_task, mail):
                 put_object_body=open(generated_images_dir + '/' + file, 'rb')
             )
         
-        with open(zip_ready_generated, 'wb') as f:
-            f.write(r.content)
         update_status_work_request(mail, 'image_generation_completed')
     else:
         update_status_work_request(mail, 'image_generation_failed')
