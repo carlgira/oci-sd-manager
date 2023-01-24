@@ -92,15 +92,17 @@ def submit_images():
                 extension = filename.split('.')[-1]
                 
                 img_content = object_storage_client.get_object(namespace, bucket, folder + '/' + filename).data.content
-                # save image to disk
                 
-                with open(SESSION_DIR + '/' + str(i) + '.' + extension, 'wb') as f:
+                original_images = SESSION_DIR + '/' + mail
+                if not os.path.exists(original_images):
+                    os.mkdir(original_images)
+                with open(original_images + '/' + str(i) + '.' + extension, 'wb') as f:
                     f.write(img_content)
-                
-            zip_file = SESSION_DIR + '/images.zip'
+            
+            file = 'images.zip'    
+            zip_file = SESSION_DIR + '/' + file
             subprocess.getoutput("zip -j {ZIP_FILE} {ZIP_FILES}".format(ZIP_FILE=zip_file, ZIP_FILES=SESSION_DIR + '/*'))
             
-            file = 'images.zip'
             fileobj = open(zip_file, 'rb')
             
             update_status_work_request(mail, 'smart_crop')
@@ -140,6 +142,21 @@ def smart_crop_request(mail, server, session, file, fileobj):
             
     if r.status_code == 200:
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
+        crop_images_dir = 'sessions/' + session + '/' + mail + '_crop_images'
+        
+        if not os.path.exists(crop_images_dir):
+            os.mkdir(crop_images_dir)
+            
+        subprocess.run(["unzip", zip_ready_file, '-d' , crop_images_dir], check=True)
+        
+        for file in os.listdir(crop_images_dir):
+            object_storage_client.put_object(
+                namespace_name=os.environ['NAMESPACE_NAME'],
+                bucket_name=os.environ['BUCKET_NAME'],
+                object_name=mail +  '_crop_images' + '/' + file,
+                put_object_body=open(crop_images_dir + '/' + file, 'rb')
+            )
+        
         with open(zip_ready_file, 'wb') as f:
             f.write(r.content)
         logging.info('Smart crop completed ' + r.text)
@@ -200,6 +217,7 @@ def check_if_training(runnable_task, mail):
         runnable_task.enter(60, 1, check_if_training, (runnable_task, mail))
     else:
         logging.info('SD ready')
+        update_status_work_request(mail, 'training_completed')
         runnable_task.enter(300, 1, sd_ready, (runnable_task, mail))
 
 @flask.route('/sd_ready', methods=['POST'])
@@ -207,6 +225,7 @@ def sd_ready_api():
     content = request.get_json()
     mail = content['mail']
     sd_ready(None, mail)
+    return jsonify({'status': 'success', 'message': 'SD executed'})
 
 def sd_ready(runnable_task, mail):
     global work_requests
@@ -229,6 +248,21 @@ def sd_ready(runnable_task, mail):
     
     if r.status_code == 200:
         zip_ready_generated = 'sessions/' + session + '/images_generated.zip'
+        generated_images_dir = 'sessions/' + session + '/' + mail + '_generated_images'
+        
+        if not os.path.exists(generated_images_dir):
+            os.mkdir(generated_images_dir)
+        
+        subprocess.run(["unzip", zip_ready_generated, '-d' , generated_images_dir], check=True)
+        
+        for file in os.listdir(generated_images_dir):
+            object_storage_client.put_object(
+                namespace_name=os.environ['NAMESPACE_NAME'],
+                bucket_name=os.environ['BUCKET_NAME'],
+                object_name=mail +  '_generated_images' + '/' + file,
+                put_object_body=open(generated_images_dir + '/' + file, 'rb')
+            )
+        
         with open(zip_ready_generated, 'wb') as f:
             f.write(r.content)
         update_status_work_request(mail, 'image_generation_completed')
