@@ -138,7 +138,7 @@ def update_status_work_request(mail, status):
     work_requests.to_csv(WORK_REQUEST_FILE, index=False)
 
 def update_status_server(server, status):
-    servers.loc[servers['server'] == server, 'status'] = status
+    servers.loc[servers['ip'] == server, 'status'] = status
     servers.to_csv(SEVERS_FILE, index=False)
 
 def smart_crop_request(mail, server, session, file, fileobj):
