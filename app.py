@@ -327,9 +327,9 @@ def create_collage(generated_images_dir, event):
     logo = Image.open(img_logo_path)
     new_im.paste(logo, (512*3 - 270 , 512 + 768 - 120))
     
-    new_im.save(generated_images_dir + '/collage.jpg')
+    new_im.save(generated_images_dir + '/collage.png')
     
-    return generated_images_dir + '/collage.jpg'
+    return generated_images_dir + '/collage.png'
     
 # run the flask app
 if __name__ == '__main__':
