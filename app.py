@@ -325,9 +325,9 @@ def create_collage(generated_images_dir, event):
     
     img_logo_path = events[events['event'] == event].image_path.values[0]
     logo = Image.open(img_logo_path)
-    new_im.paste(logo, (512*3 - 270 , 512 + 768 - 120))
+    final = Image.alpha_composite(new_im, logo)
     
-    new_im.save(generated_images_dir + '/collage.png')
+    final.save(generated_images_dir + '/collage.png')
     
     return generated_images_dir + '/collage.png'
     
