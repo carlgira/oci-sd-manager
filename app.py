@@ -323,7 +323,8 @@ def create_collage(generated_images_dir, event):
         im = Image.open(file)
         new_im.paste(im, ((i // 3) * 512, (i % 3) * 512))
     
-    logo = Image.open(events[events['event'] == event].image_path.values[0])
+    img_logo_path = events[events['event'] == event].image_path.values[0]
+    logo = Image.open(img_logo_path)
     new_im.paste(logo, 512*3 - 270 , 512 + 768 - 120)
     
     new_im.save(generated_images_dir + '/collage.jpg')
