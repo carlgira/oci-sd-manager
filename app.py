@@ -72,6 +72,7 @@ def submit_images():
         mail = content['mail']
         server = content['server']
         tag = content['tag']
+        event = content['event']
         
         images = content['images']
         session = ''.join(random.choice('abcdefghijklmnopqrtsvwyz') for i in range(10))
@@ -83,7 +84,7 @@ def submit_images():
             if images is None or len(images) == 0:
                 return jsonify(message='No file uploaded', category="error", status=500)
             
-            work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': tag, 'session' : session, 'status': 'created'}, ignore_index=True)
+            work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': tag, 'session' : session, 'status': 'created', 'event' : event}, ignore_index=True)
             work_requests.to_csv(WORK_REQUEST_FILE, index=False)
             
             for i, img_url in enumerate(images):
@@ -271,7 +272,8 @@ def sd_ready(runnable_task, mail):
         
         subprocess.run(["unzip", '-o', zip_ready_generated, '-d' , generated_images_dir], check=True)
         
-        create_collage(generated_images_dir)
+        event = work_requests.loc[work_requests['mail'] == mail, 'event'].values[0]
+        create_collage(generated_images_dir, event)
         
         for file in os.listdir(generated_images_dir):
             object_storage_client.put_object(
@@ -297,10 +299,11 @@ def collage():
     mail = content['mail']
     session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
     generated_images_dir = 'sessions/' + session + '/' + mail + '_generated_images'
-    collage_path = create_collage(generated_images_dir)
+    event = work_requests.loc[work_requests['mail'] == mail, 'event'].values[0]
+    collage_path = create_collage(generated_images_dir, event)
     return send_file(collage_path, mimetype='image/png')
 
-def create_collage(generated_images_dir):
+def create_collage(generated_images_dir, event):
     files = os.listdir(generated_images_dir)
     random.shuffle(files)
     small_images = []
@@ -320,7 +323,7 @@ def create_collage(generated_images_dir):
         im = Image.open(file)
         new_im.paste(im, ((i // 3) * 512, (i % 3) * 512))
     
-    logo = Image.open(events['event'].image_path)
+    logo = Image.open(events[events['event'] == ].image_path)
     new_im.paste(logo, 512*3 - 270 , 512 + 768 - 120)
     
     new_im.save(generated_images_dir + '/collage.jpg')
