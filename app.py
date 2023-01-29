@@ -309,7 +309,7 @@ def create_collage(generated_images_dir, event):
     small_images = []
     big_images = []
     for file in files:
-        if not file.endswith('.png'):
+        if file.endswith('json'):
             continue
         width, height = Image.open(generated_images_dir + '/' + files[0]).size
         if width == 512 and height == 512:
