@@ -318,11 +318,12 @@ def create_collage(generated_images_dir, event):
             big_images.append(generated_images_dir + '/' + file)
     
     new_im = Image.new('RGBA', (512 * 3, 512 + 768))
-    choosen_images = small_images[:3] + big_images[:3]
-    for i, file in enumerate(choosen_images):
-        im = Image.open(file)
-        new_im.paste(im, ((i % 3) * 512, (i // 3) * 512))
-    
+    for i, (file_small, file_big) in enumerate(zip(small_images[:3], big_images[:3])):
+        im_small = Image.open(file_small)
+        im_big = Image.open(file_big)
+        new_im.paste(im_small, ((i % 3) * 512, 512 + 768))
+        new_im.paste(im_big, ((i % 3) * 512, 512))
+        
     img_logo_path = events[events['event'] == event].image_path.values[0]
     logo = Image.open(img_logo_path)
     final = Image.alpha_composite(new_im, logo)
