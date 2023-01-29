@@ -311,9 +311,8 @@ def create_collage(generated_images_dir, event):
     for file in files:
         if file.endswith('json'):
             continue
-        
         width, height = Image.open(generated_images_dir + '/' + files[0]).size
-        logging.info(file + ' ' + str(width) + ' ' + str(height)
+        logging.info(file + ' ' + str(width) + ' ' + str(height))
         if width == 512 and height == 512:
             small_images.append(generated_images_dir + '/' + file)
         else:
