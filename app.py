@@ -317,7 +317,7 @@ def create_collage(generated_images_dir, event):
         else:
             big_images.append(generated_images_dir + '/' + file)
     
-    new_im = Image.new('RGB', (512 * 3, 512 + 768))
+    new_im = Image.new('RGBA', (512 * 3, 512 + 768))
     choosen_images = small_images[:3] + big_images[:3]
     for i, file in enumerate(choosen_images):
         im = Image.open(file)
