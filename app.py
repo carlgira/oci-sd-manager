@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import requests
 import os
 import subprocess
@@ -12,16 +12,19 @@ import time
 from oci.object_storage import ObjectStorageClient
 import sched
 import logging
+from PIL import Image
 logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.DEBUG)
 
 WORK_DIR = os.environ['install_dir']
 SEVERS_FILE= 'data/servers.csv'
 WORK_REQUEST_FILE = 'data/work_requests.csv'
 PROMPTS_FILE = 'data/prompts.csv'
+EVENTS_FILE = 'data/events.csv'
 
 servers = pd.read_csv(SEVERS_FILE)
 work_requests = pd.read_csv(WORK_REQUEST_FILE)
 prompts = pd.read_csv(PROMPTS_FILE)
+events = pd.read_csv(EVENTS_FILE)
 
 flask = Flask(__name__)
 cors = CORS(flask)
@@ -268,6 +271,8 @@ def sd_ready(runnable_task, mail):
         
         subprocess.run(["unzip", '-o', zip_ready_generated, '-d' , generated_images_dir], check=True)
         
+        create_collage(generated_images_dir)
+        
         for file in os.listdir(generated_images_dir):
             object_storage_client.put_object(
                 namespace_name=os.environ['NAMESPACE_NAME'],
@@ -286,6 +291,39 @@ def is_dreambooth_running(server):
     r = requests.get('http://' + server + ':3000/status')
     return r.status_code == 200 and r.json()['status']
 
+@flask.route('/collage', methods=['POST'])
+def collage():
+    content = request.get_json()
+    mail = content['mail']
+    session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
+    generated_images_dir = 'sessions/' + session + '/' + mail + '_generated_images'
+    collage_path = create_collage(generated_images_dir)
+    return send_file(collage_path, mimetype='image/png')
+
+def create_collage(generated_images_dir):
+    files = os.listdir(generated_images_dir)
+    random.shuffle(files)
+    small_images = []
+    big_images = []
+    for file in files:
+        width, height = Image.open(generated_images_dir + '/' + files[0]).size
+        if width == 512 and height == 512:
+            small_images.append(generated_images_dir + '/' + file)
+        else:
+            big_images.append(generated_images_dir + '/' + file)
+    
+    new_im = Image.new('RGB', (512 * 3, 512 + 768))
+    for i, file in enumerate(small_images[:3].extend(big_images[:3])):
+        im = Image.open(file)
+        new_im.paste(im, ((i // 3) * 512, (i % 3) * 512))
+    
+    logo = Image.open(events['event'].image_path)
+    new_im.paste(logo, 512*3 - 270 , 512 + 768 - 120)
+    
+    new_im.save(generated_images_dir + '/collage.jpg')
+    
+    return generated_images_dir + '/collage.jpg'
+    
 # run the flask app
 if __name__ == '__main__':
     flask.run(debug=True, port=7000)
