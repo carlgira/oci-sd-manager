@@ -321,7 +321,7 @@ def create_collage(generated_images_dir, event):
     choosen_images = small_images[:3] + big_images[:3]
     for i, file in enumerate(choosen_images):
         im = Image.open(file)
-        new_im.paste(im, ((i % 3) * 512, (i // 3) * 512))
+        new_im.paste(im, ((i // 3) * 512, (i % 3) * 512))
     
     img_logo_path = events[events['event'] == event].image_path.values[0]
     logo = Image.open(img_logo_path)
