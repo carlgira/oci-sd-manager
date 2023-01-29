@@ -306,6 +306,8 @@ def create_collage(generated_images_dir):
     small_images = []
     big_images = []
     for file in files:
+        if not file.endswith('.png'):
+            continue
         width, height = Image.open(generated_images_dir + '/' + files[0]).size
         if width == 512 and height == 512:
             small_images.append(generated_images_dir + '/' + file)
