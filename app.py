@@ -331,6 +331,39 @@ def create_collage(generated_images_dir, event):
     final.save(generated_images_dir + '/collage.png')
     
     return generated_images_dir + '/collage.png'
+
+@flask.route('/chosen_images', methods=['POST'])
+def chosen_images():
+    content = request.get_json()
+    mail = content['mail']
+    files = content['files']
+    session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
+    
+    SESSION_DIR = 'sessions/' + session
+    
+    chosen_images_dir = SESSION_DIR + '/' + mail + '_chosen_images'
+    generated_images_dir = SESSION_DIR + '/' + mail + '_generated_images'
+    subprocess.run(["rm", '-rf', chosen_images_dir], check=True)
+    subprocess.run(["mkdir", chosen_images_dir], check=True)
+    
+    for file in files:
+        objectName = file['objectName'].split('/')[-1]
+        use = file['use']
+        if use:
+            subprocess.run(["cp", generated_images_dir + '/' + objectName, chosen_images_dir], check=True)
+    
+    for file in os.listdir(chosen_images_dir):
+            object_storage_client.put_object(
+                namespace_name=os.environ['NAMESPACE_NAME'],
+                bucket_name=os.environ['BUCKET_NAME'],
+                object_name=mail +  '_chosen_images' + '/' + file,
+                put_object_body=open(chosen_images_dir + '/' + file, 'rb')
+            )
+    
+    zip_file = SESSION_DIR + '/' + mail + '_final_images.zip'
+    subprocess.getoutput("zip -j {ZIP_FILE} {ZIP_FILES}".format(ZIP_FILE=zip_file, ZIP_FILES=chosen_images_dir + '/*'))
+    
+    return jsonify({'status': 'success', 'message': 'Images chosen successfully'})
     
 # run the flask app
 if __name__ == '__main__':
