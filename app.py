@@ -13,6 +13,7 @@ from oci.object_storage import ObjectStorageClient
 import sched
 import logging
 from PIL import Image
+import datetime
 logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.DEBUG)
 
 WORK_DIR = os.environ['install_dir']
@@ -272,9 +273,6 @@ def sd_ready(runnable_task, mail):
         
         subprocess.run(["unzip", '-o', zip_ready_generated, '-d' , generated_images_dir], check=True)
         
-        event = work_requests.loc[work_requests['mail'] == mail, 'event'].values[0]
-        create_collage(generated_images_dir, event)
-        
         for file in os.listdir(generated_images_dir):
             object_storage_client.put_object(
                 namespace_name=os.environ['NAMESPACE_NAME'],
@@ -303,19 +301,19 @@ def collage():
     collage_path = create_collage(generated_images_dir, event)
     return send_file(collage_path, mimetype='image/png')
 
-def create_collage(generated_images_dir, event):
-    files = os.listdir(generated_images_dir)
+def create_collage(working_images_dir, event):
+    files = os.listdir(working_images_dir)
     random.shuffle(files)
     small_images = []
     big_images = []
     for file in files:
         if file.endswith('json'):
             continue
-        width, height = Image.open(generated_images_dir + '/' + file).size
+        width, height = Image.open(working_images_dir + '/' + file).size
         if width == 512 and height == 512:
-            small_images.append(generated_images_dir + '/' + file)
+            small_images.append(working_images_dir + '/' + file)
         else:
-            big_images.append(generated_images_dir + '/' + file)
+            big_images.append(working_images_dir + '/' + file)
     
     new_im = Image.new('RGBA', (512 * 3, 512 + 768))
     for i, (file_small, file_big) in enumerate(zip(small_images[:3], big_images[:3])):
@@ -328,9 +326,9 @@ def create_collage(generated_images_dir, event):
     logo = Image.open(img_logo_path)
     final = Image.alpha_composite(new_im, logo)
     
-    final.save(generated_images_dir + '/collage.png')
+    final.save(working_images_dir + '/collage.png')
     
-    return generated_images_dir + '/collage.png'
+    return working_images_dir + '/collage.png'
 
 @flask.route('/chosen_images', methods=['POST'])
 def chosen_images():
@@ -352,6 +350,9 @@ def chosen_images():
         if use:
             subprocess.run(["cp", generated_images_dir + '/' + objectName, chosen_images_dir], check=True)
     
+    event = work_requests.loc[work_requests['mail'] == mail, 'event'].values[0]
+    create_collage(chosen_images_dir, event)
+    
     for file in os.listdir(chosen_images_dir):
             object_storage_client.put_object(
                 namespace_name=os.environ['NAMESPACE_NAME'],
@@ -360,11 +361,44 @@ def chosen_images():
                 put_object_body=open(chosen_images_dir + '/' + file, 'rb')
             )
     
-    zip_file = SESSION_DIR + '/' + mail + '_final_images.zip'
+    return jsonify({'status': 'success', 'message': 'Images chosen successfully'})
+
+@flask.route('/images_for_user', methods=['POST'])
+def images_for_user():
+    content = request.get_json()
+    mail = content['mail']
+    event = work_requests.loc[work_requests['mail'] == mail, 'event'].values[0]
+    session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
+    SESSION_DIR = 'sessions/' + session
+    
+    chosen_images_dir = SESSION_DIR + '/' + mail + '_chosen_images'
+    create_collage(chosen_images_dir, event)
+    
+    filename = mail + '_final_images.zip'
+    zip_file = SESSION_DIR + '/' + filename
+    subprocess.getoutput("rm -rf {ZIP_FILE}".format(ZIP_FILE=zip_file))
     subprocess.getoutput("zip -j {ZIP_FILE} {ZIP_FILES}".format(ZIP_FILE=zip_file, ZIP_FILES=chosen_images_dir + '/*'))
     
-    return jsonify({'status': 'success', 'message': 'Images chosen successfully'})
+    object_storage_client.put_object(
+        namespace_name=os.environ['NAMESPACE_NAME'],
+        bucket_name=os.environ['BUCKET_NAME'],
+        object_name=filename,
+        put_object_body=open(zip_file, 'rb')
+    )
     
+    response = object_storage_client.create_preauthenticated_request(
+        os.environ['NAMESPACE_NAME'], 
+        os.environ['BUCKET_NAME'], 
+        oci.object_storage.models.CreatePreauthenticatedRequestDetails(
+            "download",
+            "Deny",
+            filename,
+            "ObjectRead",
+            datetime.datetime.now() + datetime.timedelta(days=3)
+        ))
+    
+    return jsonify(oci.util.to_dict(response.data))
+
 # run the flask app
 if __name__ == '__main__':
     flask.run(debug=True, port=7000)
