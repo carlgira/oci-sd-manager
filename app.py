@@ -400,7 +400,7 @@ def images_for_user():
         os.environ['BUCKET_NAME'],
         pre_auth_request_details)
     
-    return jsonify(oci.util.to_dict(response.data))
+    return jsonify({'status': 'success', 'message': 'Images ready for user', 'url': "https://objectstorage.eu-frankfurt-1.oraclecloud.com" + response.data.access_uri})
 
 # run the flask app
 if __name__ == '__main__':
