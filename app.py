@@ -10,6 +10,7 @@ import oci
 import re
 import time
 from oci.object_storage import ObjectStorageClient
+from oci.object_storage.models import CreatePreauthenticatedRequestDetails
 import sched
 import logging
 from PIL import Image
@@ -386,16 +387,18 @@ def images_for_user():
         put_object_body=open(zip_file, 'rb')
     )
     
+    pre_auth_request_details = CreatePreauthenticatedRequestDetails(
+            name="download",
+            bucket_listing_action="Deny",
+            object_name=filename,
+            access_type="ObjectRead",
+            time_expires=datetime.datetime.now() + datetime.timedelta(days=3)
+        )
+    
     response = object_storage_client.create_preauthenticated_request(
         os.environ['NAMESPACE_NAME'], 
-        os.environ['BUCKET_NAME'], 
-        oci.object_storage.models.CreatePreauthenticatedRequestDetails(
-            "download",
-            "Deny",
-            filename,
-            "ObjectRead",
-            datetime.datetime.now() + datetime.timedelta(days=3)
-        ))
+        os.environ['BUCKET_NAME'],
+        pre_auth_request_details)
     
     return jsonify(oci.util.to_dict(response.data))
 
