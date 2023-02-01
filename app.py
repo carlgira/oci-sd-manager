@@ -120,6 +120,7 @@ def submit_images():
                 
             return jsonify(message='Smart crop started', category="success", status=200)
         
+        update_status_work_request(mail, 'smart_crop_failed')
         return jsonify(message='Training already running', category="error", status=500)
 
     return jsonify(message='Did not receive a POST request', category="error", status=500)
@@ -155,33 +156,37 @@ def smart_crop_request(mail, server, session, file, fileobj):
         update_status_work_request(mail, 'smart_crop_failed')
         traceback.print_exc()
     
-    if r.status_code == 200:
-        zip_ready_file = 'sessions/' + session + '/images_ready.zip'
-        with open(zip_ready_file, 'wb') as f:
-            f.write(r.content)
+    try:
+        if r.status_code == 200:
+            zip_ready_file = 'sessions/' + session + '/images_ready.zip'
+            with open(zip_ready_file, 'wb') as f:
+                f.write(r.content)
+                
+            crop_images_dir = 'sessions/' + session + '/' + mail + '_crop_images'
             
-        crop_images_dir = 'sessions/' + session + '/' + mail + '_crop_images'
-        
-        if not os.path.exists(crop_images_dir):
-            os.mkdir(crop_images_dir)
+            if not os.path.exists(crop_images_dir):
+                os.mkdir(crop_images_dir)
+                
+            subprocess.run(["unzip", "-o" , zip_ready_file, '-d' , crop_images_dir], check=True)
             
-        subprocess.run(["unzip", "-o" , zip_ready_file, '-d' , crop_images_dir], check=True)
+            for file in os.listdir(crop_images_dir):
+                object_storage_client.put_object(
+                    namespace_name=os.environ['NAMESPACE_NAME'],
+                    bucket_name=os.environ['BUCKET_NAME'],
+                    object_name=mail +  '_crop_images' + '/' + file,
+                    put_object_body=open(crop_images_dir + '/' + file, 'rb')
+                )
+            
+            logging.info('Smart crop completed ' + r.text)
+            update_status_work_request(mail, 'smart_crop_completed')
+        else:
+            logging.info('Smart crop failed ' + r.text)
+            update_status_work_request(mail, 'smart_crop_failed')
         
-        for file in os.listdir(crop_images_dir):
-            object_storage_client.put_object(
-                namespace_name=os.environ['NAMESPACE_NAME'],
-                bucket_name=os.environ['BUCKET_NAME'],
-                object_name=mail +  '_crop_images' + '/' + file,
-                put_object_body=open(crop_images_dir + '/' + file, 'rb')
-            )
-        
-        logging.info('Smart crop completed ' + r.text)
-        update_status_work_request(mail, 'smart_crop_completed')
-    else:
-        logging.info('Smart crop failed ' + r.text)
+        update_status_server(server, 'free')
+    except:
         update_status_work_request(mail, 'smart_crop_failed')
-    
-    update_status_server(server, 'free')
+        traceback.print_exc()
         
 
 @flask.route('/train', methods=['POST'])
