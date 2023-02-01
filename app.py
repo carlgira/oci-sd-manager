@@ -149,14 +149,9 @@ def update_status_server(server, status):
     servers.loc[servers['ip'] == server, 'status'] = status
     servers.to_csv(SEVERS_FILE, index=False)
 
-def smart_crop_request(mail, server, session, file, fileobj):
+def smart_crop_request(mail, server, session, file, fileobj):    
     try:
         r = requests.post('http://' + server +':4000/submit', data={'session': session}, files={"images": (file, fileobj)})
-    except:
-        update_status_work_request(mail, 'smart_crop_failed')
-        traceback.print_exc()
-    
-    try:
         if r.status_code == 200:
             zip_ready_file = 'sessions/' + session + '/images_ready.zip'
             with open(zip_ready_file, 'wb') as f:
