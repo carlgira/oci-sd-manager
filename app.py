@@ -87,8 +87,11 @@ def submit_images():
             if images is None or len(images) == 0:
                 return jsonify(message='No file uploaded', category="error", status=500)
             
-            work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': tag, 'session' : session, 'status': 'created', 'event' : event}, ignore_index=True)
-            work_requests.to_csv(WORK_REQUEST_FILE, index=False)
+            if not work_requests['mail'].str.contains(mail).any():    
+                work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': tag, 'session' : session, 'status': 'created', 'event' : event}, ignore_index=True)
+                work_requests.to_csv(WORK_REQUEST_FILE, index=False)
+            
+            session = work_requests.loc[work_requests['mail'] == mail]['session'].values[0]
             
             for i, img_url in enumerate(images):
                 url_parts = extract_fields_from_url(img_url)
