@@ -92,6 +92,7 @@ def submit_images():
                 work_requests.to_csv(WORK_REQUEST_FILE, index=False)
             
             session = work_requests.loc[work_requests['mail'] == mail]['session'].values[0]
+            server = work_requests.loc[work_requests['mail'] == mail]['server'].values[0]
             
             for i, img_url in enumerate(images):
                 url_parts = extract_fields_from_url(img_url)
