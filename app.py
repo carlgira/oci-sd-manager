@@ -148,8 +148,10 @@ def update_status_server(server, status):
     servers.to_csv(SEVERS_FILE, index=False)
 
 def smart_crop_request(mail, server, session, file, fileobj):
-    time.sleep(10) # Wait to process gets to wait activity
-    r = requests.post('http://' + server +':4000/submit', data={'session': session}, files={"images": (file, fileobj)})
+    try:
+        r = requests.post('http://' + server +':4000/submit', data={'session': session}, files={"images": (file, fileobj)})
+    except:
+        update_status_work_request(mail, 'smart_crop_failed')
     
     if r.status_code == 200:
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
