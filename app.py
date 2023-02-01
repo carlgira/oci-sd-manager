@@ -126,7 +126,7 @@ def submit_images():
 
 
 def is_training_running(mail):
-    return len(work_requests.loc[(work_requests['mail'] == mail) & (work_requests['status'] != 'completed')]) > 0
+    return len(work_requests.loc[(work_requests['mail'] == mail) & (work_requests['status'] != 'completed') & (work_requests['status'] != 'smart_crop_failed')]) > 0
 
 def extract_fields_from_url(url):
     match = re.search(r'\/n\/(?P<namespace>\w+)\/b\/(?P<bucket>\w+)\/o\/(?P<mail>\w+@[\w.]+)\/(?P<filename>[\w.]+)', url)
