@@ -15,6 +15,7 @@ import sched
 import logging
 from PIL import Image
 import datetime
+import traceback
 logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.DEBUG)
 
 WORK_DIR = os.environ['install_dir']
@@ -152,6 +153,7 @@ def smart_crop_request(mail, server, session, file, fileobj):
         r = requests.post('http://' + server +':4000/submit', data={'session': session}, files={"images": (file, fileobj)})
     except:
         update_status_work_request(mail, 'smart_crop_failed')
+        traceback.print_exc()
     
     if r.status_code == 200:
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
