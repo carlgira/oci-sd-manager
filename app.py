@@ -182,7 +182,6 @@ def smart_crop_request(mail, server, session, file, fileobj):
             logging.info('Smart crop failed ' + r.text)
             update_status_work_request(mail, 'smart_crop_failed')
         
-        update_status_server(server, 'free')
     except:
         update_status_work_request(mail, 'smart_crop_failed')
         traceback.print_exc()
@@ -214,7 +213,7 @@ def start_training(mail, zip_file, server ,session):
     training_subject = 'Character'
     subject_type = 'person'
     class_dir = 'person_ddim'
-    training_steps = 100
+    training_steps = 1600
     seed = random.randint(7, 1000000)
     fileobj = open(zip_file, 'rb')
     payload = {'training_subject': training_subject, 'subject_type': subject_type, 'instance_name': session, 'class_dir': class_dir, 'training_steps': training_steps, 'seed': seed}
@@ -230,7 +229,6 @@ def start_training(mail, zip_file, server ,session):
         task_training.run()
     else:
         update_status_work_request(mail, 'train_failed')
-        update_status_server(server, 'free')
 
 
 def check_if_training(runnable_task, mail):
@@ -291,10 +289,10 @@ def sd_ready(runnable_task, mail):
             )
         
         update_status_work_request(mail, 'image_generation_completed')
+        update_status_server(server, 'free')
     else:
         update_status_work_request(mail, 'image_generation_failed')
     
-    update_status_server(server, 'free')
 
 def is_dreambooth_running(server):
     r = requests.get('http://' + server + ':3000/status')
