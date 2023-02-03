@@ -110,12 +110,14 @@ def submit_images():
             session = work_requests.loc[work_requests['mail'] == mail]['session'].values[0]
             server = work_requests.loc[work_requests['mail'] == mail]['server'].values[0]
             
-            for i, img_url in enumerate(images):
-                url_parts = extract_fields_from_url(img_url)
-                namespace = url_parts['namespace']
-                bucket = url_parts['bucket']
-                folder = url_parts['mail']
-                filename = url_parts['filename']
+            url_parts = extract_fields_from_url(images[0])
+            namespace = url_parts['namespace']
+            bucket = url_parts['bucket']
+            
+            list_object_versions = object_storage_client.list_objects(namespace, bucket, prefix=mail).data.objects
+            
+            for i, img_url in enumerate(list_object_versions):
+                filename = img_url.name.split('/')[-1]
                 extension = filename.split('.')[-1]
                 
                 img_content = object_storage_client.get_object(namespace, bucket, folder + '/' + filename).data.content
@@ -148,10 +150,6 @@ def submit_images():
 
 def is_training_running(mail):
     return len(work_requests.loc[(work_requests['mail'] == mail) & (work_requests['status'] != 'completed') & (work_requests['status'] != 'smart_crop_failed')]) > 0
-
-def extract_fields_from_url(url):
-    match = re.search(r'\/n\/(?P<namespace>\w+)\/b\/(?P<bucket>\w+)\/o\/(?P<mail>\w+@[\w.]+)\/(?P<filename>[\w.]+)', url)
-    return match.groupdict()
 
 def extract_fields_from_url(url):
     url = url.split('/')
