@@ -120,7 +120,7 @@ def submit_images():
                 filename = img_url.name.split('/')[-1]
                 extension = filename.split('.')[-1]
                 
-                img_content = object_storage_client.get_object(namespace, bucket, folder + '/' + filename).data.content
+                img_content = object_storage_client.get_object(namespace, bucket, mail + '/' + filename).data.content
                 
                 original_images = SESSION_DIR + '/' + mail
                 if not os.path.exists(original_images):
