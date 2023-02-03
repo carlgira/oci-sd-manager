@@ -16,7 +16,7 @@ import logging
 from PIL import Image
 import datetime
 import traceback
-logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.INFO)
 
 WORK_DIR = os.environ['install_dir']
 SEVERS_FILE= 'data/servers.csv'
@@ -58,11 +58,27 @@ def work_requests_api():
         return jsonify(work_requests.loc[work_requests['mail'] == decoded_mail].to_dict(orient='records'))
         
 
-@flask.route('/servers', methods=['GET'])
+@flask.route('/servers', methods=['GET', 'POST', 'DELETE'])
 def servers_api():
     global servers
     if request.method == 'GET':
         return jsonify(servers.to_dict(orient='records'))
+
+    if request.method == 'POST':
+        content = request.get_json()
+        ip = content['ip']
+        status = content['status']
+        servers = servers.append({'ip': ip, 'status': status}, ignore_index=True)
+        servers.to_csv(SEVERS_FILE, index=False)
+        return jsonify({'status': 'success', 'message': 'Server added'})
+    
+    if request.method == 'DELETE':
+        content = request.get_json()
+        ip = content['ip']
+        servers = servers[servers.ip != ip]
+        servers.to_csv(SEVERS_FILE, index=False)
+        return jsonify({'status': 'success', 'message': 'Server deleted'})
+    
     return jsonify({'status': 'error', 'message': 'Invalid request'})
 
 
