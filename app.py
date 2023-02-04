@@ -62,6 +62,7 @@ def work_requests_api():
 def servers_api():
     global servers
     if request.method == 'GET':
+        check_servers()
         return jsonify(servers.to_dict(orient='records'))
 
     if request.method == 'POST':
@@ -421,6 +422,20 @@ def images_for_user():
         pre_auth_request_details)
     
     return jsonify({'status': 'success', 'message': 'Images ready for user', 'url': "https://objectstorage.eu-frankfurt-1.oraclecloud.com" + response.data.access_uri})
+
+
+def check_servers():
+    global servers
+    for server in servers['ip'].values:
+        try:
+            response = requests.get('http://' + server + ':3000/status')
+            if response.status_code != 200:
+                servers = servers[servers['ip'] != server]
+        except:
+            servers = servers[servers['ip'] != server]
+    
+    servers.to_csv(SEVERS_FILE, index=False)
+    
 
 # run the flask app
 if __name__ == '__main__':
