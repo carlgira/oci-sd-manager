@@ -424,7 +424,7 @@ def images_for_user():
 
 # run the flask app
 if __name__ == '__main__':
-    flask.run(debug=True, port=7000)
+    flask.run(host='0.0.0.0', port=7000)
     
 
 
