@@ -294,7 +294,6 @@ def sd_ready(runnable_task, mail):
             os.mkdir(generated_images_dir)
         
         subprocess.run(["unzip", '-o', zip_ready_generated, '-d' , generated_images_dir], check=True)
-        subprocess.run(["rm", "-rf", generated_images_dir + '/prompts.json'])
         
         for file in os.listdir(generated_images_dir):
             object_storage_client.put_object(
