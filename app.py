@@ -428,7 +428,7 @@ def check_servers():
     global servers
     for server in servers['ip'].values:
         try:
-            response = requests.get('http://' + server + ':3000/status')
+            response = requests.get('http://' + server + ':3000/status', timeout=3)
             if response.status_code != 200:
                 servers = servers[servers['ip'] != server]
         except:
