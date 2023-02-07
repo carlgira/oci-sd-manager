@@ -168,6 +168,27 @@ def update_status_server(server, status):
     servers.loc[servers['ip'] == server, 'status'] = status
     servers.to_csv(SEVERS_FILE, index=False)
 
+@flask.route('/smart_crop', methods=['POST'])
+def smart_crop():
+    global work_requests
+    if request.method == 'POST':
+        
+        content = request.get_json()
+        mail = content['mail']
+        server = work_requests.loc[work_requests['mail'] == mail]['server'].values[0]
+        session = work_requests.loc[work_requests['mail'] == mail]['session'].values[0]
+        file = 'images.zip'
+        SESSION_DIR = 'sessions/' + session
+        zip_file = SESSION_DIR + '/' + file
+        fileobj = open(zip_file, 'rb')
+        
+        tr = threading.Thread(target=smart_crop_request, args=(mail, server, session, file, fileobj))
+        tr.start()
+                
+        return jsonify(message='Smart crop started', category="success", status=200)
+
+    return jsonify(message='Did not receive a POST request', category="error", status=500)
+    
 def smart_crop_request(mail, server, session, file, fileobj):    
     try:
         r = requests.post('http://' + server +':4000/submit', data={'session': session}, files={"images": (file, fileobj)})
