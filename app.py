@@ -21,7 +21,6 @@ logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.INFO)
 
 flask = Flask(__name__)
 cors = CORS(flask)
-OIC_URL = os.environ['OIC_URL']
 cors_origins = ['*']
 
 object_storage_client = ObjectStorageClient(config=oci.config.from_file('~/.oci/config'))
