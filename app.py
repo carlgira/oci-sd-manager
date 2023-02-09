@@ -16,18 +16,8 @@ import logging
 from PIL import Image
 import datetime
 import traceback
+import data
 logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.INFO)
-
-WORK_DIR = os.environ['install_dir']
-SEVERS_FILE= 'data/servers.csv'
-WORK_REQUEST_FILE = 'data/work_requests.csv'
-PROMPTS_FILE = 'data/prompts.csv'
-EVENTS_FILE = 'data/events.csv'
-
-servers = pd.read_csv(SEVERS_FILE)
-work_requests = pd.read_csv(WORK_REQUEST_FILE)
-prompts = pd.read_csv(PROMPTS_FILE)
-events = pd.read_csv(EVENTS_FILE)
 
 flask = Flask(__name__)
 cors = CORS(flask)
@@ -37,47 +27,42 @@ cors_origins = ['*']
 object_storage_client = ObjectStorageClient(config=oci.config.from_file('~/.oci/config'))
 
 @flask.route('/work_requests', methods=['PUT', 'GET', 'POST'])
-def work_requests_api():
-    global work_requests
-    
+def work_requests_api():    
     if request.method == 'PUT':
         content = request.get_json()
         mail = content['mail']
         status = content['status']
         
-        update_status_work_request(mail, status)
+        data.update_status_work_request(mail, status)
     
         return jsonify({'status': 'success', 'message': 'Work request updated'})
 
     if request.method == 'GET':
         mail = request.args.get('mail')
         if mail is None or len(mail) == 0:
-            return jsonify(work_requests.to_dict(orient='records'))
+            return jsonify(data.get_work_requests())
         
         decoded_mail = mail.replace('%40', '@')
-        return jsonify(work_requests.loc[work_requests['mail'] == decoded_mail].to_dict(orient='records'))
+        return jsonify(data.get_work_request(decoded_mail))
         
 
 @flask.route('/servers', methods=['GET', 'POST', 'DELETE'])
 def servers_api():
-    global servers
     if request.method == 'GET':
-        check_servers()
-        return jsonify(servers.to_dict(orient='records'))
+        data.check_servers()
+        return jsonify(data.get_servers())
 
     if request.method == 'POST':
         content = request.get_json()
         ip = content['ip']
         status = content['status']
-        servers = servers.append({'ip': ip, 'status': status}, ignore_index=True)
-        servers.to_csv(SEVERS_FILE, index=False)
+        data.add_new_server(ip, status)
         return jsonify({'status': 'success', 'message': 'Server added'})
     
     if request.method == 'DELETE':
         content = request.get_json()
         ip = content['ip']
-        servers = servers[servers.ip != ip]
-        servers.to_csv(SEVERS_FILE, index=False)
+        data.delete_server(ip)
         return jsonify({'status': 'success', 'message': 'Server deleted'})
     
     return jsonify({'status': 'error', 'message': 'Invalid request'})
@@ -85,7 +70,6 @@ def servers_api():
 
 @flask.route('/submit_images', methods=['POST'])
 def submit_images():
-    global work_requests
     if request.method == 'POST':
         
         content = request.get_json()
@@ -104,12 +88,11 @@ def submit_images():
             if images is None or len(images) == 0:
                 return jsonify(message='No file uploaded', category="error", status=500)
             
-            if not work_requests['mail'].str.contains(mail).any():    
-                work_requests = work_requests.append({'mail': mail, 'server': server, 'tag': tag, 'session' : session, 'status': 'created', 'event' : event}, ignore_index=True)
-                work_requests.to_csv(WORK_REQUEST_FILE, index=False)
+            if len(data.get_work_request(mail)) == 0: # FIX Check that this works
+                data.add_new_work_request(mail, server, tag, session, 'created', event)
             
-            session = work_requests.loc[work_requests['mail'] == mail]['session'].values[0]
-            server = work_requests.loc[work_requests['mail'] == mail]['server'].values[0]
+            session = data.get_work_request(mail, 'session')
+            server = data.get_work_request(mail, 'server')
             
             url_parts = extract_fields_from_url(images[0])
             namespace = url_parts['namespace']
@@ -135,22 +118,23 @@ def submit_images():
             
             fileobj = open(zip_file, 'rb')
             
-            update_status_work_request(mail, 'smart_crop_started')
-            update_status_server(server, 'busy')
+            data.update_status_work_request(mail, 'smart_crop_started')
+            data.update_status_server(server, 'busy')
             
             tr = threading.Thread(target=smart_crop_request, args=(mail, server, session, file, fileobj))
             tr.start()
                 
             return jsonify(message='Smart crop started', category="success", status=200)
         
-        update_status_work_request(mail, 'smart_crop_failed')
+        data.update_status_work_request(mail, 'smart_crop_failed')
         return jsonify(message='Training already running', category="error", status=500)
 
     return jsonify(message='Did not receive a POST request', category="error", status=500)
 
 
 def is_training_running(mail):
-    return len(work_requests.loc[(work_requests['mail'] == mail) & (work_requests['status'] != 'completed') & (work_requests['status'] != 'smart_crop_failed')]) > 0
+    work_request = data.get_work_request(mail)
+    return work_request['status'] != 'completed' or work_request['status'] != 'smart_crop_failed'
 
 def extract_fields_from_url(url):
     url = url.split('/')
@@ -160,23 +144,14 @@ def extract_fields_from_url(url):
     filename = url[-1]
     return {"namespace": namespace, "bucket": bucket, "mail": folder, "filename": filename}
 
-def update_status_work_request(mail, status):
-    work_requests.loc[work_requests['mail'] == mail, 'status'] = status
-    work_requests.to_csv(WORK_REQUEST_FILE, index=False)
-
-def update_status_server(server, status):
-    servers.loc[servers['ip'] == server, 'status'] = status
-    servers.to_csv(SEVERS_FILE, index=False)
-
 @flask.route('/smart_crop', methods=['POST'])
 def smart_crop():
-    global work_requests
     if request.method == 'POST':
         
         content = request.get_json()
         mail = content['mail']
-        server = work_requests.loc[work_requests['mail'] == mail]['server'].values[0]
-        session = work_requests.loc[work_requests['mail'] == mail]['session'].values[0]
+        server = data.get_work_request(mail, 'server')
+        session = data.get_work_request(mail, 'session')
         file = 'images.zip'
         SESSION_DIR = 'sessions/' + session
         zip_file = SESSION_DIR + '/' + file
@@ -213,34 +188,32 @@ def smart_crop_request(mail, server, session, file, fileobj):
                 )
             
             logging.info('Smart crop completed ' + r.text)
-            update_status_work_request(mail, 'smart_crop_completed')
+            data.update_status_work_request(mail, 'smart_crop_completed')
         else:
             logging.info('Smart crop failed ' + r.text)
-            update_status_work_request(mail, 'smart_crop_failed')
+            data.update_status_work_request(mail, 'smart_crop_failed')
         
     except:
-        update_status_work_request(mail, 'smart_crop_failed')
+        data.update_status_work_request(mail, 'smart_crop_failed')
         traceback.print_exc()
         
 
 @flask.route('/train', methods=['POST'])
 def train():
-    global work_requests
     if request.method == 'POST':
         content = request.get_json()
         mail = content['mail']
-        session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
-        server = work_requests.loc[work_requests['mail'] == mail, 'server'].values[0]
+        session = data.get_work_request(mail, 'session')
+        server = data.get_work_request(mail, 'server')
         zip_ready_file = 'sessions/' + session + '/images_ready.zip'
         
-        update_status_work_request(mail, 'training_started')
-        update_status_server(server, 'busy')
+        data.update_status_work_request(mail, 'training_started')
+        data.update_status_server(server, 'busy')
         
         tr = threading.Thread(target=start_training, args=(mail, zip_ready_file, server , session))
         tr.start()
         
         return jsonify({'status': 'success', 'message': 'Training started'})
-    
     
     return jsonify({'status': 'error', 'message': 'Invalid request'})
         
@@ -254,7 +227,7 @@ def start_training(mail, zip_file, server ,session):
     fileobj = open(zip_file, 'rb')
     payload = {'training_subject': training_subject, 'subject_type': subject_type, 'instance_name': session, 'class_dir': class_dir, 'training_steps': training_steps, 'seed': seed}
     
-    update_status_work_request(mail, 'training_started')
+    data.update_status_work_request(mail, 'training_started')
     
     r = requests.post('http://' + server + ':3000/', data=payload, files={"images": (zip_file, fileobj)})
     logging.info('Training started ')
@@ -264,18 +237,16 @@ def start_training(mail, zip_file, server ,session):
         task_training.enter(60, 1, check_if_training, (task_training, mail,))
         task_training.run()
     else:
-        update_status_work_request(mail, 'train_failed')
-
+        data.update_status_work_request(mail, 'train_failed')
 
 def check_if_training(runnable_task, mail):
-    global work_requests
-    server = work_requests.loc[work_requests['mail'] == mail, 'server'].values[0]
+    server = data.get_work_request(mail, 'server')
     if is_dreambooth_running(server):
         logging.info('Still training')
         runnable_task.enter(60, 1, check_if_training, (runnable_task, mail))
     else:
         logging.info('SD ready')
-        update_status_work_request(mail, 'training_completed')
+        data.update_status_work_request(mail, 'training_completed')
         runnable_task.enter(300, 1, sd_ready, (runnable_task, mail))
 
 @flask.route('/sd_ready', methods=['POST'])
@@ -286,21 +257,19 @@ def sd_ready_api():
     return jsonify({'status': 'success', 'message': 'SD executed'})
 
 def sd_ready(runnable_task, mail):
-    global work_requests
-    tag = work_requests.loc[work_requests['mail'] == mail, 'tag'].values[0]
-    session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
+    tag = data.get_work_request(mail, 'tag')
+    session = data.get_work_request(mail, 'session')
     SESSION_DIR = 'sessions/' + session
     
-    server = work_requests.loc[work_requests['mail'] == mail, 'server'].values[0]
-    
-    file_prompt = prompts.loc[prompts['tag'] == tag, 'file_path'].values[0]
+    server = data.get_work_request(mail, 'server')
+    file_prompt = data.get_prompt(tag, 'file_path')
     
     new_file_prompt = SESSION_DIR + '/' + '/prompts.json'
     subprocess.getoutput("cp " + file_prompt + " " + new_file_prompt)
     subprocess.getoutput('sed -i "s/<subject>/' + session + '/g" ' + new_file_prompt)
     fileobj = open(new_file_prompt, 'rb')
 
-    update_status_work_request(mail, 'image_generation_started')
+    data.update_status_work_request(mail, 'image_generation_started')
     
     r = requests.post('http://' + server + ':3000/txt2img', files={"prompts": ('prompts.json', fileobj)})
     
@@ -324,10 +293,10 @@ def sd_ready(runnable_task, mail):
                 put_object_body=open(generated_images_dir + '/' + file, 'rb')
             )
         
-        update_status_work_request(mail, 'image_generation_completed')
-        update_status_server(server, 'free')
+        data.update_status_work_request(mail, 'image_generation_completed')
+        data.update_status_server(server, 'free')
     else:
-        update_status_work_request(mail, 'image_generation_failed')
+        data.update_status_work_request(mail, 'image_generation_failed')
     
 
 def is_dreambooth_running(server):
@@ -338,9 +307,9 @@ def is_dreambooth_running(server):
 def collage():
     content = request.get_json()
     mail = content['mail']
-    session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
+    session = data.get_work_request(mail, 'session')
+    event = data.get_work_request(mail, 'event')
     generated_images_dir = 'sessions/' + session + '/' + mail + '_generated_images'
-    event = work_requests.loc[work_requests['mail'] == mail, 'event'].values[0]
     collage_path = create_collage(generated_images_dir, event)
     return send_file(collage_path, mimetype='image/png')
 
@@ -365,7 +334,7 @@ def create_collage(working_images_dir, event):
         new_im.paste(im_small, ((i % 3) * 512, 0))
         new_im.paste(im_big, ((i % 3) * 512, 512))
         
-    img_logo_path = events[events['event'] == event].image_path.values[0]
+    img_logo_path = data.get_event(event, 'image_path')
     logo = Image.open(img_logo_path)
     final = Image.alpha_composite(new_im, logo)
     
@@ -378,7 +347,7 @@ def chosen_images():
     content = request.get_json()
     mail = content['mail']
     files = content['files']
-    session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
+    session = data.get_work_request(mail, 'session')
     
     SESSION_DIR = 'sessions/' + session
     
@@ -393,7 +362,7 @@ def chosen_images():
         if use:
             subprocess.run(["cp", generated_images_dir + '/' + objectName, chosen_images_dir], check=True)
     
-    event = work_requests.loc[work_requests['mail'] == mail, 'event'].values[0]
+    event = data.get_work_request(mail, 'event')
     create_collage(chosen_images_dir, event)
     
     for file in os.listdir(chosen_images_dir):
@@ -410,8 +379,8 @@ def chosen_images():
 def images_for_user():
     content = request.get_json()
     mail = content['mail']
-    event = work_requests.loc[work_requests['mail'] == mail, 'event'].values[0]
-    session = work_requests.loc[work_requests['mail'] == mail, 'session'].values[0]
+    event = data.get_work_request(mail, 'event')
+    session = data.get_work_request(mail, 'session')
     SESSION_DIR = 'sessions/' + session
     
     chosen_images_dir = SESSION_DIR + '/' + mail + '_chosen_images'
@@ -444,19 +413,6 @@ def images_for_user():
     
     return jsonify({'status': 'success', 'message': 'Images ready for user', 'url': "https://objectstorage.eu-frankfurt-1.oraclecloud.com" + response.data.access_uri})
 
-
-def check_servers():
-    global servers
-    for server in servers['ip'].values:
-        try:
-            response = requests.get('http://' + server + ':3000/status', timeout=3)
-            if response.status_code != 200:
-                servers = servers[servers['ip'] != server]
-        except:
-            servers = servers[servers['ip'] != server]
-    
-    servers.to_csv(SEVERS_FILE, index=False)
-    
 
 # run the flask app
 if __name__ == '__main__':
