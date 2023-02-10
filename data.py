@@ -91,6 +91,7 @@ def get_data_id(table, id):
     finally:
         if con is not None:
             con.close()
+    return []
 
 def get_data_all(table):
     con = None
@@ -108,6 +109,7 @@ def get_data_all(table):
     finally:
         if con is not None:
             con.close()
+    return []
 
 def update_data(table, id, field, value):
     con = None
