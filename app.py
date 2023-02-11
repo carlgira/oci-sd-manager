@@ -87,7 +87,7 @@ def submit_images():
             if images is None or len(images) == 0:
                 return jsonify(message='No file uploaded', category="error", status=500)
             
-            if len(data.get_work_request(mail)) == 0: # FIX Check that this works
+            if len(data.get_work_request(mail)) == 0:
                 data.add_new_work_request(mail, server, tag, session, 'created', event)
             
             session = data.get_work_request(mail, 'session')
@@ -133,6 +133,8 @@ def submit_images():
 
 def is_training_running(mail):
     work_request = data.get_work_request(mail)
+    if len(work_request) == 0:
+        return False
     return work_request['status'] != 'completed' or work_request['status'] != 'smart_crop_failed'
 
 def extract_fields_from_url(url):
@@ -246,16 +248,15 @@ def check_if_training(runnable_task, mail):
     else:
         logging.info('SD ready')
         data.update_status_work_request(mail, 'training_completed')
-        runnable_task.enter(300, 1, sd_ready, (runnable_task, mail))
 
 @flask.route('/sd_ready', methods=['POST'])
 def sd_ready_api():
     content = request.get_json()
     mail = content['mail']
-    sd_ready(None, mail)
+    sd_ready(mail)
     return jsonify({'status': 'success', 'message': 'SD executed'})
 
-def sd_ready(runnable_task, mail):
+def sd_ready(mail):
     tag = data.get_work_request(mail, 'tag')
     session = data.get_work_request(mail, 'session')
     SESSION_DIR = 'sessions/' + session
