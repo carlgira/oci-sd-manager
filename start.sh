@@ -122,7 +122,14 @@ fi
 
 # locate the bin folder of the venv
 export venv_bin_dir=$(dirname "$(command -v python)")
-export OIC_URL='https://wedooic-wedoinfra.integration.ocp.oraclecloud.com'
+export ATP_USERNAME=''
+export ATP_PASSWORD=''
+export DB_DNS=''
+export TNS_ADMIN=''
+export LD_LIBRARY_PATH=/home/ubuntu/instantclient_21_9:$LD_LIBRARY_PATH
+export OCI_RESOURCE_PRINCIPAL_VERSION='2.2'
+export NAMESPACE_NAME=''
+export BUCKET_NAME=''
 
 printf "\n%s\n" "${delimiter}"
 printf "Launching app.py..."
