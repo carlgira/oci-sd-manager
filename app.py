@@ -294,7 +294,6 @@ def sd_ready(mail):
             )
         
         data.update_status_work_request(mail, 'image_generation_completed')
-        data.update_status_server(server, 'free')
     else:
         data.update_status_work_request(mail, 'image_generation_failed')
     
@@ -381,6 +380,7 @@ def images_for_user():
     mail = content['mail']
     event = data.get_work_request(mail, 'event')
     session = data.get_work_request(mail, 'session')
+    server = data.get_event(event, 'server')
     SESSION_DIR = 'sessions/' + session
     
     chosen_images_dir = SESSION_DIR + '/' + mail + '_chosen_images'
@@ -410,6 +410,8 @@ def images_for_user():
         os.environ['NAMESPACE_NAME'], 
         os.environ['BUCKET_NAME'],
         pre_auth_request_details)
+    
+    data.update_status_server(server, 'free')
     
     return jsonify({'status': 'success', 'message': 'Images ready for user', 'url': "https://objectstorage.eu-frankfurt-1.oraclecloud.com" + response.data.access_uri})
 
