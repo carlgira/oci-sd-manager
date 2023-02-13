@@ -380,7 +380,7 @@ def images_for_user():
     mail = content['mail']
     event = data.get_work_request(mail, 'event')
     session = data.get_work_request(mail, 'session')
-    server = data.get_event(event, 'server')
+    server = data.get_work_request(mail, 'server')
     SESSION_DIR = 'sessions/' + session
     
     chosen_images_dir = SESSION_DIR + '/' + mail + '_chosen_images'
