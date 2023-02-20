@@ -67,6 +67,14 @@ def servers_api():
     return jsonify({'status': 'error', 'message': 'Invalid request'})
 
 
+@flask.route('/event', methods=['POST'])
+def get_events():
+    if request.method == 'POST':
+        content = request.get_json()
+        event = content['event']
+
+        return jsonify(data.get_event(event))
+
 @flask.route('/submit_images', methods=['POST'])
 def submit_images():
     if request.method == 'POST':
