@@ -139,6 +139,30 @@ def submit_images():
     return jsonify(message='Did not receive a POST request', category="error", status=500)
 
 
+mail_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+def check_mail(mail):
+    return re.fullmatch(mail_regex, mail)
+
+@flask.route('/clean_mail', methods=['POST'])
+def clean_mail():
+    if request.method == 'POST':
+        content = request.get_json()
+        mail = content['mail']
+        if not check_mail(mail):
+            return jsonify(message='Invalid mail', category="error", status=500)
+        else:
+            files = object_storage_client.list_objects(os.environ['NAMESPACE_NAME'], 
+                                                       os.environ['BUCKET_NAME'], prefix=mail).data.objects
+            for file in files:
+                object_storage_client.delete_object(os.environ['NAMESPACE_NAME'], 
+                                                os.environ['BUCKET_NAME'], file)
+            
+            data.delete_work_request(mail)
+            
+        return jsonify(message='Mail cleaned', category="success", status=200)
+    
+    return jsonify(message='Did not receive a POST request', category="error", status=500)
+
 def is_training_running(mail):
     work_request = data.get_work_request(mail)
     if len(work_request) == 0:

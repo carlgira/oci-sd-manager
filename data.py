@@ -29,6 +29,9 @@ def add_new_work_request(mail, server, tag, session, status, event):
 
 def update_status_work_request(mail, status):
     update_data(WORK_REQUESTS_TABLE, mail, 'status', status)
+    
+def delete_work_request(mail):
+    delete_data(WORK_REQUESTS_TABLE, mail)
 
 # SERVERS
 
