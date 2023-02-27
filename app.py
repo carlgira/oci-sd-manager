@@ -151,11 +151,12 @@ def clean_mail():
         if not check_mail(mail):
             return jsonify(message='Invalid mail', category="error", status=500)
         else:
-            files = object_storage_client.list_objects(os.environ['NAMESPACE_NAME'], 
+            list_of_objects = object_storage_client.list_objects(os.environ['NAMESPACE_NAME'], 
                                                        os.environ['BUCKET_NAME'], prefix=mail).data.objects
-            for file in files:
+            
+            for object in list_of_objects:
                 object_storage_client.delete_object(os.environ['NAMESPACE_NAME'], 
-                                                os.environ['BUCKET_NAME'], file.name)
+                                                os.environ['BUCKET_NAME'], object.name)
             
             data.delete_work_request(mail)
             
