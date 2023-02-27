@@ -147,7 +147,7 @@ def check_mail(mail):
 def clean_mail():
     if request.method == 'POST':
         content = request.get_json()
-        mail = content['mail']
+        mail = content['mail'].replace('%40', '@')
         if not check_mail(mail):
             return jsonify(message='Invalid mail', category="error", status=500)
         else:
