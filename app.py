@@ -154,6 +154,7 @@ def clean_mail():
             files = object_storage_client.list_objects(os.environ['NAMESPACE_NAME'], 
                                                        os.environ['BUCKET_NAME'], prefix=mail).data.objects
             for file in files:
+                print(file)
                 object_storage_client.delete_object(os.environ['NAMESPACE_NAME'], 
                                                 os.environ['BUCKET_NAME'], file['name'])
             
