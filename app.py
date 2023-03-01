@@ -85,25 +85,20 @@ def submit_images():
         tag = content['tag']
         event = content['event']
         
-        images = content['images']
         session = ''.join(random.choice('abcdefghijklmnopqrtsvwyz') for i in range(10))
         
         SESSION_DIR = 'sessions/' + session
         os.mkdir(SESSION_DIR)
         
         if not is_training_running(mail):
-            if images is None or len(images) == 0:
-                return jsonify(message='No file uploaded', category="error", status=500)
-            
             if len(data.get_work_request(mail)) == 0:
                 data.add_new_work_request(mail, server, tag, session, 'created', event)
             
             session = data.get_work_request(mail, 'session')
             server = data.get_work_request(mail, 'server')
             
-            url_parts = extract_fields_from_url(images[0])
-            namespace = url_parts['namespace']
-            bucket = url_parts['bucket']
+            namespace = os.environ['NAMESPACE_NAME']
+            bucket = os.environ['BUCKET_NAME']
             
             list_object_versions = object_storage_client.list_objects(namespace, bucket, prefix=mail).data.objects
             
@@ -119,7 +114,7 @@ def submit_images():
                 with open(original_images + '/' + str(i) + '.' + extension, 'wb') as f:
                     f.write(img_content)
             
-            file = 'images.zip'    
+            file = 'images.zip'
             zip_file = SESSION_DIR + '/' + file
             subprocess.getoutput("zip -j {ZIP_FILE} {ZIP_FILES}".format(ZIP_FILE=zip_file, ZIP_FILES=original_images + '/*'))
             
